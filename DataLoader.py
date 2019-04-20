@@ -52,7 +52,8 @@ def collateFrames(frameList):
     targetY = [yFrame[i][1:yFrame[i].shape[0]] for i in frameOrder]
 
     inputY = pad_sequence(inputY)
-    targetY = pad_sequence(targetY)
+    targetY = pad_sequence(targetY).transpose(0,1)
+
 
 
     yTensor = torch.cat(yFrame)

@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from torch.nn.functional import pad
 from configuration import batch_size,device
 from torch.autograd import Variable
 
@@ -8,7 +9,21 @@ class CrossEntropyLossWithMask(nn.CrossEntropyLoss):
         super(CrossEntropyLossWithMask,self).__init__(reduction='none')
 
     def forward(self, input, target,targe_length):
-        loss=super(CrossEntropyLossWithMask,self).forward(input.view(-1,input.size()[2]), target.transpose(0,1).contiguous().view(-1).type(torch.LongTensor))
+
+        #pad the shorter one if target and input are of different length
+        if target.size(1)!=input.size(1):
+            if target.size(1)>input.size(1):
+                distance=target.size(1)-input.size(1)
+                pd=(0,0,0,distance)
+                input=pad(input, pd, "constant", 0)
+
+                distance=5
+                input[:,input.size(1)-distance:,32]=torch.ones(input[:,input.size(1)-distance:,32].size())*32
+            elif target.size(1)<input.size(1):
+                distance=input.size(1)-target.size(1)
+                pd=(0,distance)
+                target=pad(target,pd,"constant",32)
+        loss=super(CrossEntropyLossWithMask,self).forward(input.view(-1,input.size()[2]), target.contiguous().view(-1).type(torch.LongTensor))
 
 
         max_length=input.size(1)
