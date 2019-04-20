@@ -190,9 +190,6 @@ class LasModel(nn.Module):
             # char=y_input[i]#should be sqeuence?
 
 
-
-
-
             if self.is_train==True:
                 r=random.uniform(0,1)
                 if i == 0:
