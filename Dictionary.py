@@ -31,5 +31,4 @@ charDic={' ':0,
          'Z':30,
          '_':31,
          '@':32}
-for k, v in charDic.items():
-    print(k, v)
+print(len(charDic))
