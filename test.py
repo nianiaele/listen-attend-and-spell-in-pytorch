@@ -2,11 +2,13 @@ import numpy as np
 import configuration
 import util
 from Dictionary import charDic
+import torch
 
 # print(configuration.dataBasePath)
 # trainX=np.load(configuration.dataBasePath+"train.npy",encoding="bytes")
 # trainY=np.load(configuration.dataBasePath+"train_transcripts.npy",encoding="bytes")
 #
+# devX=np.load(configuration.dataBasePath+"dev.npy",encoding="bytes")
 # devY=np.load(configuration.dataBasePath+"dev_transcripts.npy",encoding="bytes")
 #
 # append_count=[]
@@ -51,6 +53,8 @@ from Dictionary import charDic
 #
 # np.save(configuration.dataBasePath+"newDevY.npy",newDevY)
 
-import random
-r=random.uniform(0,1)
-print("number",r)
+a=torch.randn(3,4)
+a=a.view(-1)
+sortedd,indices=torch.sort(a,descending=True)
+
+ao=3

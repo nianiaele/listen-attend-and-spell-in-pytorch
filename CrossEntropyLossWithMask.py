@@ -16,13 +16,13 @@ class CrossEntropyLossWithMask(nn.CrossEntropyLoss):
                 distance=target.size(1)-input.size(1)
                 pd=(0,0,0,distance)
                 input=pad(input, pd, "constant", 0)
-
-                distance=5
                 input[:,input.size(1)-distance:,32]=torch.ones(input[:,input.size(1)-distance:,32].size())*32
+
             elif target.size(1)<input.size(1):
                 distance=input.size(1)-target.size(1)
                 pd=(0,distance)
                 target=pad(target,pd,"constant",32)
+
         loss=super(CrossEntropyLossWithMask,self).forward(input.view(-1,input.size()[2]), target.contiguous().view(-1).type(torch.LongTensor))
 
 

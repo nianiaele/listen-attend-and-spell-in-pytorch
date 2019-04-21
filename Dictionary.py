@@ -31,4 +31,5 @@ charDic={' ':0,
          'Z':30,
          '_':31,
          '@':32}
-print(len(charDic))
+char_List=[' ',"'",'+','-','.','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','_','@']
+print(len(char_List))

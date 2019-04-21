@@ -72,6 +72,8 @@ def collateFrames(frameList):
     xLensTensor = torch.tensor(xLens)
     yLensTensor = torch.tensor(yLens)
 
+
+
     return xFrame, yTensor, xBounds, yBounds, xLensTensor, yLensTensor, inputY, targetY
 
 
@@ -93,10 +95,18 @@ def collateTest(frameList):
     return xFrame, xBounds, xLensTensor
 
 
-trainXPath = configuration.dataBasePath + 'train.npy'
-trainYPath = configuration.dataBasePath + 'newTrainY.npy'
-trainDataSet = WSJDataset(trainXPath, trainYPath)
-trainLoader = DataLoader(trainDataSet, shuffle=False, batch_size=5, collate_fn=collateFrames, num_workers=16)
+# trainXPath = configuration.dataBasePath + 'train.npy'
+# trainYPath = configuration.dataBasePath + 'newTrainY.npy'
+# trainDataSet = WSJDataset(trainXPath, trainYPath)
+# trainLoader = DataLoader(trainDataSet, shuffle=False, batch_size=5, collate_fn=collateFrames, num_workers=16)
 
-# for x,y,xbounds,ybounds,xLens,yLens,inputY,targetY in trainLoader:
-#     a=3
+devX=np.load(configuration.dataBasePath+"dev.npy",encoding="bytes")
+devY=np.load(configuration.dataBasePath+"dev_transcripts.npy",encoding="bytes")
+
+
+dev_x_path=configuration.dataBasePath+"dev.npy"
+dev_dataset=WSJDataset(dev_x_path)
+test_loader=DataLoader(dev_dataset,shuffle=False,batch_size=2,collate_fn=collateTest,num_workers=2)
+
+for x,xbounds,xLens in test_loader:
+    aa=4

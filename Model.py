@@ -41,7 +41,12 @@ class Decoder(nn.Module):
         inputs=inputs.type(torch.LongTensor)
         inputs=self.embedding(inputs)
 
-        context=context.squeeze()
+        if len(inputs.size())==1:
+            inputs=inputs.view((1,inputs.size(0)))
+
+        #shoult context view this way?
+        context=context.squeeze().view(inputs.size())
+
 
         h=torch.cat((inputs,context),1)
 
