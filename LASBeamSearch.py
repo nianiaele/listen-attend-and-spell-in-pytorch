@@ -6,6 +6,7 @@ from torch.utils.data.dataloader import DataLoader
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence,pack_sequence
 from torch.autograd import Variable
 import torch.nn.functional as F
+import torch.nn as nn
 import queue
 import csv
 from Dictionary import char_List
@@ -29,7 +30,7 @@ class beam_node():
 model=LasModel()
 
 print("loading model")
-checkPoint = torch.load("./myModel", map_location='cpu')
+checkPoint = torch.load(dataBasePath+"myModel", map_location='cpu')
 
 model.load_state_dict(checkPoint['model_state_dict'])
 
@@ -89,6 +90,7 @@ def beam_search(model,data_loader,beam_width):
 
 def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context):
     i=0
+    softmax=nn.Softmax(dim=2)
     while True:
         if i == 0:
             char = torch.LongTensor([32] * batch_size)
@@ -97,7 +99,10 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
             energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
 
-            attention = F.softmax(energy, dim=2)
+            #should not has this
+            energy=energy*100000000000000
+
+            attention = softmax(energy)
 
             attention = attention * mask
 

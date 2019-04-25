@@ -2,7 +2,7 @@
 import torch
 
 dataBasePath='/home/lixin/newCourses/11785/hw4p2/data/'
-
+# dataBasePath='/home/lixin/hw4/data/data/'
 
 device="cuda" if torch.cuda.is_available() else "cpu"
 
@@ -15,9 +15,12 @@ frame_dim=40
 batch_size=1
 output_dim=33
 learning_rate=0.001
-epoch_num=20
+epoch_num=40
 dictionary_length=33
-teacher_forcing=0.1
+teacher_forcing=0.12
 predict_result="prediction.csv"
 beam_width=20
 max_generate_length=100
+print_cut=1000
+encoder_dropout=0.1
+is_pretrain=False

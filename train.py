@@ -11,12 +11,14 @@ from configuration import dataBasePath,device,epoch_num,batch_size
 from DataLoader import WSJDataset,collateFrames
 from Model import LasModel
 from CrossEntropyLossWithMask import CrossEntropyLossWithMask
+from util import plot_grad_flow
 
-def train_epoch():
+def train_epoch(epoch_num):
     total_loss=0
     total_perplexity=0
     batch_num=0
     model.is_train=True
+    model.to(device)
     for batch_id,(x,y,xbounds,ybounds,xLens,yLens,inputy,targety) in enumerate(train_loader):
 
         batch_num = batch_id + 1
@@ -28,9 +30,16 @@ def train_epoch():
 
         optimizer.zero_grad()
 
+        # x.to(device)
         packed_x=pack_sequence(x)
-        # packed_inputy=pack_sequence(inputy)
-        # packed_targety=pack_sequence(targety)
+
+        packed_x=packed_x.to(device)
+        xLens=xLens.to(device)
+        yLens=yLens.to(device)
+        inputy=inputy.to(device)
+
+        # print(packed_x.dtype)
+
 
         output=model(packed_x,xLens,inputy,targety,yLens)
 
@@ -38,13 +47,25 @@ def train_epoch():
 
         loss.backward()
 
+        plot_grad_flow(model.decoder.named_parameters())
+
+        #gradient clipping
+        for para in model.parameters():
+            # print(para.grad)
+            # if para.grad!=None:
+            para.grad.data.clamp_(-1, 1)
+
         optimizer.step()
 
         total_loss+=loss
 
         total_perplexity+=torch.exp(loss)
 
-        print("batch: ",batch_num)
+        # if epoch_num==0:
+        #     print(loss)
+
+        if batch_id%configuration.print_cut==0:
+            print("batch: ", batch_num)
 
         del x,y,xbounds,ybounds
 
@@ -63,10 +84,19 @@ def train_epoch():
 
         with torch.no_grad():
             packed_x = pack_sequence(x)
+
+            packed_x=packed_x.to(device)
+            xLens=xLens.to(device)
+            inputy=inputy.to(device)
+            targety=targety.to(device)
+            yLens=yLens.to(device)
+
             output = model(packed_x, xLens, inputy, targety, yLens)
             loss = criterion(output, targety, yLens)
             total_dev_loss += loss
             total_dev_perplexity += torch.exp(loss)
+
+            # print(loss)
 
     model.is_train=True
     model.to('cpu')
@@ -81,16 +111,32 @@ def train_epoch():
 
 model=LasModel()
 train_data_set=WSJDataset(dataBasePath+'train.npy',dataBasePath+'newTrainY.npy')
-train_loader=DataLoader(train_data_set,shuffle=False,batch_size=configuration.batch_size,collate_fn=collateFrames,num_workers=2)
+train_loader=DataLoader(train_data_set,shuffle=True,batch_size=configuration.batch_size,collate_fn=collateFrames,num_workers=32)
 
 dev_dataset=WSJDataset(dataBasePath+'dev.npy',dataBasePath+'newDevY.npy')
-dev_loader=DataLoader(dev_dataset,shuffle=False,batch_size=configuration.batch_size,collate_fn=collateFrames,num_workers=2)
+dev_loader=DataLoader(dev_dataset,shuffle=False,batch_size=configuration.batch_size,collate_fn=collateFrames,num_workers=32)
 
 optimizer=torch.optim.Adam(model.parameters(),lr=configuration.learning_rate,weight_decay=1e-6)
 
-criterion=CrossEntropyLossWithMask()
+criterion=CrossEntropyLossWithMask().to(device)
+
+
+if configuration.is_pretrain==True:
+    print("loading model")
+    check_point = torch.load("./myModel", map_location='cpu')
+    model.load_state_dict(check_point['model_state_dict'])
+    optimizer.load_state_dict(check_point['optimizer_label'])
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if isinstance(v, torch.Tensor):
+                state[k] = v.to(device)
+
+    # model=model.to(device)
 
 for epoch in range(epoch_num):
-    loss,perplexity,dev_loss,dev_perplexity=train_epoch()
-    print("epcoh "+str(epoch)+" average_loss: "+str(loss.item())+" average_perplexity: "+str(perplexity.item())
+    train_loss,perplexity,dev_loss,dev_perplexity=train_epoch(epoch)
+    print("epcoh "+str(epoch)+" average_loss: "+str(train_loss.item())+" average_perplexity: "+str(perplexity.item())
           +" avg_dev_loss: "+str(dev_loss.item())+" avg_dev_perplexity: "+str(dev_perplexity.item()))
+    if configuration.teacher_forcing<0.2:
+        configuration.teacher_forcing = configuration.teacher_forcing + 0.01
+    print("not teacher forcing set to ",configuration.teacher_forcing)

@@ -11,15 +11,15 @@ class WSJDataset(Dataset):
     def __init__(self, trainXpath, trainYpath=None):
         self.yPath = trainYpath
 
-        self.trainX = np.load(trainXpath, encoding='bytes')
+        self.trainX = np.load(trainXpath, encoding='bytes',allow_pickle=True)
 
         if not trainYpath == None:
-            self.trainY = np.load(trainYpath, encoding='bytes')
+            self.trainY = np.load(trainYpath, encoding='bytes',allow_pickle=True)
         else:
             self.trainY = np.random.rand((self.trainX.shape[0]))
 
-        self.trainX = self.trainX[0:10]
-        self.trainY = self.trainY[0:10]
+        self.trainX = self.trainX
+        self.trainY = self.trainY
 
         for i in range(self.trainX.shape[0]):
             self.trainX[i] = torch.from_numpy(self.trainX[i])
@@ -100,13 +100,13 @@ def collateTest(frameList):
 # trainDataSet = WSJDataset(trainXPath, trainYPath)
 # trainLoader = DataLoader(trainDataSet, shuffle=False, batch_size=5, collate_fn=collateFrames, num_workers=16)
 
-devX=np.load(configuration.dataBasePath+"dev.npy",encoding="bytes")
-devY=np.load(configuration.dataBasePath+"dev_transcripts.npy",encoding="bytes")
-
-
-dev_x_path=configuration.dataBasePath+"dev.npy"
-dev_dataset=WSJDataset(dev_x_path)
-test_loader=DataLoader(dev_dataset,shuffle=False,batch_size=2,collate_fn=collateTest,num_workers=2)
-
-for x,xbounds,xLens in test_loader:
-    aa=4
+# devX=np.load(configuration.dataBasePath+"dev.npy",encoding="bytes")
+# devY=np.load(configuration.dataBasePath+"dev_transcripts.npy",encoding="bytes")
+#
+#
+# dev_x_path=configuration.dataBasePath+"dev.npy"
+# dev_dataset=WSJDataset(dev_x_path)
+# test_loader=DataLoader(dev_dataset,shuffle=False,batch_size=2,collate_fn=collateTest,num_workers=2)
+#
+# for x,xbounds,xLens in test_loader:
+#     aa=4

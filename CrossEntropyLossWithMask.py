@@ -23,7 +23,7 @@ class CrossEntropyLossWithMask(nn.CrossEntropyLoss):
                 pd=(0,distance)
                 target=pad(target,pd,"constant",32)
 
-        loss=super(CrossEntropyLossWithMask,self).forward(input.view(-1,input.size()[2]), target.contiguous().view(-1).type(torch.LongTensor))
+        loss=super(CrossEntropyLossWithMask,self).forward(input.view(-1,input.size()[2]), target.contiguous().view(-1).type(torch.LongTensor).to(device))
 
 
         max_length=input.size(1)

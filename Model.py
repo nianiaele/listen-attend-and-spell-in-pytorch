@@ -3,9 +3,10 @@ import torch.nn as nn
 import configuration
 from torch.nn.utils.rnn import pack_padded_sequence,pad_packed_sequence
 from torch.autograd import Variable
-from configuration import batch_size,kqv_size,device,teacher_forcing
+from configuration import batch_size,kqv_size,device,teacher_forcing,encoder_dropout
 import torch.nn.functional as F
 import random
+import torch.nn.init as init
 
 class Decoder(nn.Module):
     def __init__(self):
@@ -38,7 +39,7 @@ class Decoder(nn.Module):
 
     #inputs(length, batch_size, dim)
     def forward(self,inputs,context,char_index):
-        inputs=inputs.type(torch.LongTensor)
+        inputs=inputs.type(torch.LongTensor).to(device)
         inputs=self.embedding(inputs)
 
         if len(inputs.size())==1:
@@ -111,8 +112,6 @@ class Encoder(nn.Module):
         self.pbilstm3=nn.LSTM(input_size=configuration.listener_hidden_size*4,hidden_size=configuration.listener_hidden_size,
                               batch_first=False,bidirectional=True)
 
-        self.test=nn.LSTM(input_size=configuration.frame_dim,hidden_size=configuration.listener_hidden_size,
-                            batch_first=False,bidirectional=False)
 
         self.pooling=Pooling()
 
@@ -166,8 +165,12 @@ class LasModel(nn.Module):
 
     def forward(self,x_input,x_length,y_input,y_target,y_length):
 
-
+        # print("---------------------------------------------------------")
         keys,values=self.encoder(x_input,x_length)
+
+        # print(keys)
+
+
 
         context=Variable(torch.FloatTensor(batch_size,1,kqv_size).zero_()).to(device)
 
@@ -203,13 +206,13 @@ class LasModel(nn.Module):
                     char=y_input[i]
                 else:
                     predict = self.log_softmax(last_logit)
-                    char = torch.max(predict, dim=1).indices
+                    char = torch.max(predict, dim=1)[1]
             else:
                 if i == 0:
                     char = torch.LongTensor([32] * batch_size)
                 else:
                     predict = self.log_softmax(last_logit)
-                    char = torch.max(predict, dim=1).indices
+                    char = torch.max(predict, dim=1)[1]
 
 
             query=self.decoder(char,context,i)
@@ -237,4 +240,15 @@ class LasModel(nn.Module):
             last_logit=logit
 
         out=torch.stack(out,1)
+
+        # print(out)
         return out
+
+# def weights_init(m):
+#     classname = m.__class__.__name__
+#     # print(classname)
+#
+#     init.xavier_normal_(m.weight.data)
+#     init.constant_(m.bias.data, 0.0)
+
+

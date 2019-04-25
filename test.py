@@ -10,7 +10,7 @@ import torch
 #
 # devX=np.load(configuration.dataBasePath+"dev.npy",encoding="bytes")
 # devY=np.load(configuration.dataBasePath+"dev_transcripts.npy",encoding="bytes")
-#
+
 # append_count=[]
 # for i in range(trainY.shape[0]):
 #     a = [string.decode() for string in trainY[i]]
@@ -35,9 +35,11 @@ import torch
 #     d=c.numpy()
 #     e=d
 #
+#     print(i)
+#
 #     newTrianY[i]=e
 #
-# np.save(configuration.dataBasePath+"newTrainY.npy",newTrianY)
+# np.save(configuration.dataBasePath+"newTrainY.npy",newTrianY,allow_pickle=True)
 #
 # newDevY=devY.copy()
 #
@@ -49,12 +51,13 @@ import torch
 #     d=c.numpy()
 #     e=d
 #
+#     print(i)
+#
 #     newDevY[i]=e
 #
-# np.save(configuration.dataBasePath+"newDevY.npy",newDevY)
+# np.save(configuration.dataBasePath+"newDevY.npy",newDevY,allow_pickle=True)
 
-a=torch.randn(3,4)
-a=a.view(-1)
-sortedd,indices=torch.sort(a,descending=True)
-
-ao=3
+m = torch.nn.Softmax(dim=1)
+input = torch.randn(2, 3)
+output = m(input)
+dd=3
