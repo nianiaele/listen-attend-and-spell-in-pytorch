@@ -47,13 +47,18 @@ def train_epoch(epoch_num):
 
         loss.backward()
 
-        plot_grad_flow(model.decoder.named_parameters())
+        # plot_grad_flow(model.decoder.named_parameters())
+        # plot_grad_flow(model.encoder.named_parameters())
+        # plot_grad_flow(model.named_parameters())
 
         #gradient clipping
         for para in model.parameters():
             # print(para.grad)
             # if para.grad!=None:
             para.grad.data.clamp_(-1, 1)
+
+
+        plot_grad_flow(model.named_parameters())
 
         optimizer.step()
 
@@ -123,7 +128,7 @@ criterion=CrossEntropyLossWithMask().to(device)
 
 if configuration.is_pretrain==True:
     print("loading model")
-    check_point = torch.load("./myModel", map_location='cpu')
+    check_point = torch.load(dataBasePath+"myModel", map_location='cpu')
     model.load_state_dict(check_point['model_state_dict'])
     optimizer.load_state_dict(check_point['optimizer_label'])
     for state in optimizer.state.values():

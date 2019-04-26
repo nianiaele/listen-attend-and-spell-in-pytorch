@@ -6,6 +6,8 @@ from torch.autograd import Variable
 from configuration import batch_size,kqv_size,device,teacher_forcing,encoder_dropout
 import torch.nn.functional as F
 import random
+from util import show_attention_weights
+import numpy as np
 import torch.nn.init as init
 
 class Decoder(nn.Module):
@@ -21,6 +23,8 @@ class Decoder(nn.Module):
         hidden_dim=configuration.speller_hidden_size
         attention_dim=configuration.kqv_size
         batch_size=configuration.batch_size
+        self.hidden_dim=hidden_dim
+        self.attention_dim=attention_dim
 
         self.h_0_1 = nn.Parameter(torch.zeros(1, hidden_dim))
         self.c_0_1 = nn.Parameter(torch.zeros(1, hidden_dim))
@@ -52,13 +56,20 @@ class Decoder(nn.Module):
         h=torch.cat((inputs,context),1)
 
         if char_index == 0:
-            self.h1 = self.h_0_1.expand(configuration.batch_size, -1)
-            self.h2 = self.h_0_2.expand(configuration.batch_size, -1)
-            self.h3 = self.h_0_3.expand(configuration.batch_size, -1)
+            self.h_0_1 = nn.Parameter(torch.zeros(1, self.hidden_dim))
+            self.c_0_1 = nn.Parameter(torch.zeros(1, self.hidden_dim))
+            self.h_0_2 = nn.Parameter(torch.zeros(1, self.hidden_dim))
+            self.c_0_2 = nn.Parameter(torch.zeros(1, self.hidden_dim))
+            self.h_0_3 = nn.Parameter(torch.zeros(1, self.attention_dim))
+            self.c_0_3 = nn.Parameter(torch.zeros(1, self.attention_dim))
 
-            self.c1 = self.c_0_1.expand(configuration.batch_size, -1)
-            self.c2 = self.c_0_2.expand(configuration.batch_size, -1)
-            self.c3 = self.c_0_3.expand(configuration.batch_size, -1)
+            self.h1 = self.h_0_1.expand(configuration.batch_size, -1).to(device)
+            self.h2 = self.h_0_2.expand(configuration.batch_size, -1).to(device)
+            self.h3 = self.h_0_3.expand(configuration.batch_size, -1).to(device)
+
+            self.c1 = self.c_0_1.expand(configuration.batch_size, -1).to(device)
+            self.c2 = self.c_0_2.expand(configuration.batch_size, -1).to(device)
+            self.c3 = self.c_0_3.expand(configuration.batch_size, -1).to(device)
 
         self.h1, self.c1 = self.cell1(h, (self.h1, self.c1))
 
@@ -112,7 +123,6 @@ class Encoder(nn.Module):
         self.pbilstm3=nn.LSTM(input_size=configuration.listener_hidden_size*4,hidden_size=configuration.listener_hidden_size,
                               batch_first=False,bidirectional=True)
 
-
         self.pooling=Pooling()
 
         self.key_linear=nn.Linear(in_features=configuration.listener_hidden_size*2,
@@ -123,8 +133,6 @@ class Encoder(nn.Module):
     #inputs is a packed sequence, on device
     def forward(self,inputs,length):
         output1,_=self.bilstm(inputs)
-
-        # output1, _ = self.test(inputs)
 
         output2=self.pooling(output1)
 
@@ -170,7 +178,7 @@ class LasModel(nn.Module):
 
         # print(keys)
 
-
+        attention_list=[]
 
         context=Variable(torch.FloatTensor(batch_size,1,kqv_size).zero_()).to(device)
 
@@ -223,6 +231,10 @@ class LasModel(nn.Module):
 
             attention=attention*mask
 
+
+            attention_list.append(query.unsqueeze(1).squeeze().cpu().detach().numpy())
+
+
             attention = attention/torch.sum(attention, 2).unsqueeze(2)
 
             context = torch.bmm(attention, values)
@@ -240,6 +252,9 @@ class LasModel(nn.Module):
             last_logit=logit
 
         out=torch.stack(out,1)
+
+        stack_attention=np.row_stack(attention_list)
+        show_attention_weights(stack_attention)
 
         # print(out)
         return out

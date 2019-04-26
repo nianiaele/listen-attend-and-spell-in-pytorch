@@ -3,6 +3,8 @@ import configuration
 import util
 from Dictionary import charDic
 import torch
+import torch.nn.functional as F
+
 
 # print(configuration.dataBasePath)
 # trainX=np.load(configuration.dataBasePath+"train.npy",encoding="bytes")
@@ -57,7 +59,21 @@ import torch
 #
 # np.save(configuration.dataBasePath+"newDevY.npy",newDevY,allow_pickle=True)
 
-m = torch.nn.Softmax(dim=1)
-input = torch.randn(2, 3)
-output = m(input)
-dd=3
+# m = torch.nn.Softmax(dim=1)
+# input = torch.randn(2, 3)
+# output = m(input)
+# dd=3
+
+import queue
+a=queue.PriorityQueue()
+a.put(3)
+a.put(4)
+a.put(1)
+a.put(3)
+a.put(6)
+a.put(2)
+
+for i in range(a.qsize()):
+    print(a.get())
+
+
