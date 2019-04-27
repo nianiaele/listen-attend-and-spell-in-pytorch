@@ -18,8 +18,8 @@ class WSJDataset(Dataset):
         else:
             self.trainY = np.random.rand((self.trainX.shape[0]))
 
-        self.trainX = self.trainX
-        self.trainY = self.trainY
+        # self.trainX = self.trainX[0:10]
+        # self.trainY = self.trainY[0:10]
 
         for i in range(self.trainX.shape[0]):
             self.trainX[i] = torch.from_numpy(self.trainX[i])

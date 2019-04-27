@@ -8,19 +8,19 @@ device="cuda" if torch.cuda.is_available() else "cpu"
 
 
 embedding_size=256
-kqv_size=256
+kqv_size=128
 listener_hidden_size=256
 speller_hidden_size=512
 frame_dim=40
-batch_size=1
+batch_size=2
 output_dim=33
-learning_rate=0.01
+learning_rate=0.0001
 epoch_num=40
 dictionary_length=33
-teacher_forcing=0.1
+teacher_forcing=0.05
 predict_result="prediction.csv"
 beam_width=5
 max_generate_length=100
-print_cut=1000
+print_cut=150
 encoder_dropout=0.1
-is_pretrain=True
+is_pretrain=False

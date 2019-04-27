@@ -99,7 +99,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
         if ii == 0:
             char = torch.LongTensor([32] * 1)
 
-            query = decoder(char, context, ii)
+            query,decoder_out = decoder(char, context, ii)
 
             energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
 
@@ -113,7 +113,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
             context = context.squeeze(1)
 
-            mlp_input = torch.cat((context, query), 1)
+            mlp_input = torch.cat((context, decoder_out), 1)
 
             logit = linear1(mlp_input)
             logit = relu(logit)
@@ -143,7 +143,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
                 context = node.context
 
                 input = torch.tensor(char)
-                query = decoder(input.view(input.size(), 1), context, ii)
+                query,decoder_out = decoder(input.view(input.size(), 1), context, ii)
 
                 energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
 
@@ -157,7 +157,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
                 context = context.squeeze(1)
 
-                mlp_input = torch.cat((context, query), 1)
+                mlp_input = torch.cat((context, decoder_out), 1)
 
                 logit = linear1(mlp_input)
                 logit = relu(logit)

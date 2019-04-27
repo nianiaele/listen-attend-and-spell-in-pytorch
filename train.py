@@ -11,7 +11,7 @@ from configuration import dataBasePath,device,epoch_num,batch_size
 from DataLoader import WSJDataset,collateFrames
 from Model import LasModel
 from CrossEntropyLossWithMask import CrossEntropyLossWithMask
-from util import plot_grad_flow
+from util import plot_grad_flow,show_attention_weights
 
 def train_epoch(epoch_num):
     total_loss=0
@@ -23,6 +23,7 @@ def train_epoch(epoch_num):
 
         batch_num = batch_id + 1
 
+        # print(len(x))
         #give up the last batch
         if len(x)!=batch_size:
             print("give up batch: ", batch_num)
@@ -41,7 +42,9 @@ def train_epoch(epoch_num):
         # print(packed_x.dtype)
 
 
-        output=model(packed_x,xLens,inputy,targety,yLens)
+        output,stack_attention=model(packed_x,xLens,inputy,targety,yLens)
+
+        # output_lable=torch.argmax(output.squeeze(),dim=1)
 
         loss=criterion(output,targety,yLens)
 
@@ -51,14 +54,17 @@ def train_epoch(epoch_num):
         # plot_grad_flow(model.encoder.named_parameters())
         # plot_grad_flow(model.named_parameters())
 
-        #gradient clipping
-        for para in model.parameters():
-            # print(para.grad)
-            # if para.grad!=None:
-            para.grad.data.clamp_(-1, 1)
+        # gradient clipping
+        # for para in model.parameters():
+        #     # print(para.grad)
+        #     # if para.grad!=None:
+        #     para.grad.data.clamp_(-1, 1)
 
 
-        plot_grad_flow(model.named_parameters())
+
+        # plot_grad_flow(model.named_parameters())
+
+        # print(loss)
 
         optimizer.step()
 
@@ -68,9 +74,11 @@ def train_epoch(epoch_num):
 
         # if epoch_num==0:
         #     print(loss)
+        # show_attention_weights(stack_attention)
 
         if batch_id%configuration.print_cut==0:
             print("batch: ", batch_num)
+            show_attention_weights(stack_attention)
 
         del x,y,xbounds,ybounds
 
@@ -96,7 +104,7 @@ def train_epoch(epoch_num):
             targety=targety.to(device)
             yLens=yLens.to(device)
 
-            output = model(packed_x, xLens, inputy, targety, yLens)
+            output,stack_attention = model(packed_x, xLens, inputy, targety, yLens)
             loss = criterion(output, targety, yLens)
             total_dev_loss += loss
             total_dev_perplexity += torch.exp(loss)
@@ -122,13 +130,13 @@ dev_dataset=WSJDataset(dataBasePath+'dev.npy',dataBasePath+'newDevY.npy')
 dev_loader=DataLoader(dev_dataset,shuffle=False,batch_size=configuration.batch_size,collate_fn=collateFrames,num_workers=32)
 
 optimizer=torch.optim.Adam(model.parameters(),lr=configuration.learning_rate,weight_decay=1e-6)
+# optimizer=torch.optim.SGD(model.parameters(),lr=configuration.learning_rate,weight_decay=1e-6)
 
 criterion=CrossEntropyLossWithMask().to(device)
 
-
 if configuration.is_pretrain==True:
     print("loading model")
-    check_point = torch.load(dataBasePath+"myModel", map_location='cpu')
+    check_point = torch.load("./myModel", map_location='cpu')
     model.load_state_dict(check_point['model_state_dict'])
     optimizer.load_state_dict(check_point['optimizer_label'])
     for state in optimizer.state.values():
@@ -142,6 +150,6 @@ for epoch in range(epoch_num):
     train_loss,perplexity,dev_loss,dev_perplexity=train_epoch(epoch)
     print("epcoh "+str(epoch)+" average_loss: "+str(train_loss.item())+" average_perplexity: "+str(perplexity.item())
           +" avg_dev_loss: "+str(dev_loss.item())+" avg_dev_perplexity: "+str(dev_perplexity.item()))
-    if configuration.teacher_forcing<0.2:
+    if configuration.teacher_forcing<0.1:
         configuration.teacher_forcing = configuration.teacher_forcing + 0.01
-    print("not teacher forcing set to ",configuration.teacher_forcing)
+    print("teacher forcing set to ",configuration.teacher_forcing)

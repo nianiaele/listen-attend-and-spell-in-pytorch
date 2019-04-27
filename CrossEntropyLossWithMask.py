@@ -34,7 +34,7 @@ class CrossEntropyLossWithMask(nn.CrossEntropyLoss):
             this_length=int(targe_length[i])
             loss_mask[i,0:this_length]=torch.ones(1,this_length).float()
 
-        loss_mask=Variable(loss_mask).to(device)
+        loss_mask=loss_mask.to(device)
 
         loss=loss.view(batch_size,max_length)
 

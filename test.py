@@ -64,16 +64,4 @@ import torch.nn.functional as F
 # output = m(input)
 # dd=3
 
-import queue
-a=queue.PriorityQueue()
-a.put(3)
-a.put(4)
-a.put(1)
-a.put(3)
-a.put(6)
-a.put(2)
-
-for i in range(a.qsize()):
-    print(a.get())
-
 
