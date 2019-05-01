@@ -14,7 +14,8 @@ class Decoder(nn.Module):
     def __init__(self):
         super(Decoder,self).__init__()
 
-        self.embedding=nn.Embedding(num_embeddings=configuration.dictionary_length,embedding_dim=configuration.embedding_size)
+        self.embedding = nn.Embedding(num_embeddings=configuration.dictionary_length,
+                                      embedding_dim=configuration.embedding_size)
 
         self.cell1=nn.LSTMCell(input_size=configuration.kqv_size+configuration.embedding_size,hidden_size=configuration.speller_hidden_size)
         self.cell2=nn.LSTMCell(input_size=configuration.speller_hidden_size,hidden_size=configuration.kqv_size)
@@ -26,12 +27,12 @@ class Decoder(nn.Module):
         self.hidden_dim=hidden_dim
         self.attention_dim=attention_dim
 
-        self.h_0_1 = torch.zeros(1, self.hidden_dim)
-        self.c_0_1 = torch.zeros(1, self.hidden_dim)
-        self.h_0_2 = torch.zeros(1, self.attention_dim)
-        self.c_0_2 = torch.zeros(1, self.attention_dim)
-        self.h_0_3 = torch.zeros(1, self.attention_dim)
-        self.c_0_3 = torch.zeros(1, self.attention_dim)
+        self.h_0_1 = Variable(torch.zeros(1, self.hidden_dim))
+        self.c_0_1 = Variable(torch.zeros(1, self.hidden_dim))
+        self.h_0_2 = Variable(torch.zeros(1, self.attention_dim))
+        self.c_0_2 = Variable(torch.zeros(1, self.attention_dim))
+        self.h_0_3 = Variable(torch.zeros(1, self.attention_dim))
+        self.c_0_3 = Variable(torch.zeros(1, self.attention_dim))
 
         self.h1 = self.h_0_1.expand(batch_size, -1)
         self.h2 = self.h_0_2.expand(batch_size, -1)
@@ -45,8 +46,8 @@ class Decoder(nn.Module):
 
     #inputs(length, batch_size, dim)
     def forward(self,inputs,context,char_index):
-        a=inputs
-        inputs=inputs.type(torch.LongTensor).to(device)
+
+        inputs=inputs.type(torch.long).to(device)
         inputs=self.embedding(inputs)
 
         if len(inputs.size())==1:
@@ -55,18 +56,11 @@ class Decoder(nn.Module):
         #shoult context view this way?
         context=context.squeeze(1)
 
-
         h=torch.cat((inputs,context),1)
 
         # h=torch.rand(h.size())
 
         if char_index == 0:
-            self.h_0_1 = torch.zeros(1, self.hidden_dim)
-            self.c_0_1 = torch.zeros(1, self.hidden_dim)
-            self.h_0_2 = torch.zeros(1, self.attention_dim)
-            self.c_0_2 = torch.zeros(1, self.attention_dim)
-            self.h_0_3 = torch.zeros(1, self.attention_dim)
-            self.c_0_3 = torch.zeros(1, self.attention_dim)
 
             self.h1 = self.h_0_1.expand(configuration.batch_size, -1).to(device)
             self.h2 = self.h_0_2.expand(configuration.batch_size, -1).to(device)
@@ -84,11 +78,11 @@ class Decoder(nn.Module):
 
         self.h2, self.c2 = self.cell2(self.h1, (self.h2, self.c2))
 
-        self.h3, self.c3 = self.cell3(self.h2, (self.h3, self.c3))
+        # self.h3, self.c3 = self.cell3(self.h2, (self.h3, self.c3))
 
-        return self.h2, self.h3
+        # return self.h2, self.h3
 
-
+        return self.h2, 0
 
 
 
@@ -113,7 +107,7 @@ class Pooling(nn.Module):
 
         half_length=[l//2 for l in length]
 
-        returnPack=pack_padded_sequence(metrix,half_length)
+        returnPack = pack_padded_sequence(metrix,half_length)
 
         return returnPack
 
@@ -186,15 +180,16 @@ class LasModel(nn.Module):
 
     def forward(self,x_input,x_length,y_input,y_target,y_length):
 
-        # print("---------------------------------------------------------")
         keys,values=self.encoder(x_input,x_length)
-
-        # print(keys)
+        y_input=y_input.squeeze()
 
         attention_list=[]
 
-        context=torch.FloatTensor(batch_size,1,kqv_size).zero_().to(device)
-
+        fake_attention=torch.FloatTensor(batch_size,1,values.size(0)).zero_().to(device)
+        fake_attention[:,0,0:2]=0.5
+        # context
+        context=torch.bmm(fake_attention,values.transpose(0,1))
+        # context=torch.FloatTensor(batch_size,1,kqv_size).zero_().to(device)
 
         max_x_length_after_pbilstm=keys.size(0)
 
@@ -212,28 +207,18 @@ class LasModel(nn.Module):
 
         out=[]
 
-
         last_logit=None
         for i in range(max_y_length):
-            # char=y_input[i]#should be sqeuence?
-
 
             if self.is_train==True:
                 r=random.uniform(0,1)
-                if i == 0:
+                if i==0:
                     char = torch.LongTensor([32] * batch_size)
                 elif r>teacher_forcing:
-                    char=y_input[i]
+                    char=y_input[:,i]
                 else:
                     predict = self.log_softmax(last_logit)
-                    for n in range(predict.size(1)):
-                        noise=np.random.gumbel()
-                        predict[0,n]+=noise
-
-                    c=torch.bmm(F.softmax(predict / 0.001).unsqueeze(0),self.decoder.embedding.weight.unsqueeze())
-                    self.decoder.embedding.weight
-
-
+                    char = torch.max(predict, dim=1)[1]
             else:
                 if i == 0:
                     char = torch.LongTensor([32] * batch_size)
@@ -241,14 +226,16 @@ class LasModel(nn.Module):
                     predict = self.log_softmax(last_logit)
                     char = torch.max(predict, dim=1)[1]
 
-            # context = torch.FloatTensor(batch_size, 1, kqv_size).zero_().to(device)
+            char=char.to(device)
             query,decoder_out=self.decoder(char,context,i)
 
-            energy=torch.bmm(decoder_out.unsqueeze(1),keys.transpose(1,2))
-
+            energy=torch.bmm(query.unsqueeze(1),keys.transpose(1,2))
+            # energy=energy*1000
             attention=F.softmax(energy,dim=2)
 
             attention=attention*mask
+            # print(torch.argmax(attention,dim=2))
+            # print(torch.argmax(torch.sum(keys,dim=2),dim=1))
 
             attention_list.append(attention[0].squeeze().cpu().detach().numpy())
 
@@ -258,7 +245,7 @@ class LasModel(nn.Module):
 
             context = context.squeeze(1)
 
-            mlp_input = torch.cat((context, decoder_out), 1)
+            mlp_input = torch.cat((context, query), 1)
 
             result_1 = self.linear1( mlp_input )
             result_2 = self.relu(result_1)

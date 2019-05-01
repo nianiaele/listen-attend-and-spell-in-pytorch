@@ -1,3 +1,4 @@
+import torch
 charDic={' ':0,
          "'":1,
          '+':2,
@@ -30,6 +31,14 @@ charDic={' ':0,
          'Y':29,
          'Z':30,
          '_':31,
-         '@':32}
-char_List=[' ',"'",'+','-','.','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','_','@']
+         '@':32,
+         '?':33}
+char_List=[' ',"'",'+','-','.','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','_','@','?']
 print(len(char_List))
+
+def to_string(list):
+    ss=""
+    for i in range(list.size(1)):
+        index=torch.argmax(list[0][i])
+        ss=ss+char_List[index]
+    return ss

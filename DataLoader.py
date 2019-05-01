@@ -18,8 +18,8 @@ class WSJDataset(Dataset):
         else:
             self.trainY = np.random.rand((self.trainX.shape[0]))
 
-        # self.trainX = self.trainX[0:10]
-        # self.trainY = self.trainY[0:10]
+        self.trainX = self.trainX
+        self.trainY = self.trainY
 
         for i in range(self.trainX.shape[0]):
             self.trainX[i] = torch.from_numpy(self.trainX[i])
@@ -48,11 +48,11 @@ def collateFrames(frameList):
 
     # pad_y=pad_sequence(xFrame)
 
-    inputY = [yFrame[i][0:yFrame[i].shape[0] - 1] for i in frameOrder]
-    targetY = [yFrame[i][1:yFrame[i].shape[0]] for i in frameOrder]
+    inputY = [yFrame[i][0:yFrame[i].shape[0] - 1] for i in range(len(frameOrder))]
+    targetY = [yFrame[i][1:yFrame[i].shape[0]] for i in range(len(frameOrder))]
 
-    inputY = pad_sequence(inputY)
-    targetY = pad_sequence(targetY).transpose(0,1)
+    padded_inputY = pad_sequence(inputY).transpose(0,1)
+    padded_targetY = pad_sequence(targetY).transpose(0,1)
 
 
 
@@ -74,7 +74,7 @@ def collateFrames(frameList):
 
 
 
-    return xFrame, yTensor, xBounds, yBounds, xLensTensor, yLensTensor, inputY, targetY
+    return xFrame, yTensor, xBounds, yBounds, xLensTensor, yLensTensor, padded_inputY, padded_targetY
 
 
 def collateTest(frameList):

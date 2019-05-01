@@ -14,6 +14,7 @@ def get_charmap(corpus):
     chars.sort()
     charmap = {c: i for i, c in enumerate(chars)}
     charmap['@']=32
+    charmap['?'] =33
     return chars, charmap
 
 

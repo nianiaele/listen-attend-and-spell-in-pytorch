@@ -7,11 +7,13 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence,pack_se
 import numpy as np
 import pdb
 import configuration
-from configuration import dataBasePath,device,epoch_num,batch_size
+from configuration import dataBasePath,device,epoch_num,batch_size,clip_value
 from DataLoader import WSJDataset,collateFrames
 from Model import LasModel
 from CrossEntropyLossWithMask import CrossEntropyLossWithMask
 from util import plot_grad_flow,show_attention_weights
+from Dictionary import to_string
+from torch.nn.utils import clip_grad_value_
 
 def train_epoch(epoch_num):
     total_loss=0
@@ -46,6 +48,8 @@ def train_epoch(epoch_num):
 
         # output_lable=torch.argmax(output.squeeze(),dim=1)
 
+        # print(to_string(output))
+
         loss=criterion(output,targety,yLens)
 
         loss.backward()
@@ -57,10 +61,9 @@ def train_epoch(epoch_num):
         # gradient clipping
         # for para in model.parameters():
         #     # print(para.grad)
-        #     # if para.grad!=None:
-        #     para.grad.data.clamp_(-1, 1)
-
-
+        #     if para.grad!=None:
+        #         para.grad.data.clamp_(-1, 1)
+        clip_grad_value_(model.parameters(), clip_value)
 
         # plot_grad_flow(model.named_parameters())
 
@@ -78,6 +81,7 @@ def train_epoch(epoch_num):
 
         if batch_id%configuration.print_cut==0:
             print("batch: ", batch_num)
+            print("output is:",to_string(output))
             show_attention_weights(stack_attention)
 
         del x,y,xbounds,ybounds
@@ -109,7 +113,6 @@ def train_epoch(epoch_num):
             total_dev_loss += loss
             total_dev_perplexity += torch.exp(loss)
 
-            # print(loss)
 
     model.is_train=True
     model.to('cpu')
