@@ -69,7 +69,7 @@ def beam_search(model,data_loader,beam_width):
     for i in range(beam_width):
         beam_list[i]=beam_node()
 
-    for x, xbounds, xLens in test_loader:
+    for x, xbounds, xLens in data_loader:
 
         x=pack_sequence(x)
         keys, values = encoder(x, xLens)

@@ -47,11 +47,16 @@ class Decoder(nn.Module):
     #inputs(length, batch_size, dim)
     def forward(self,inputs,context,char_index):
 
-        inputs=inputs.type(torch.long).to(device)
-        inputs=self.embedding(inputs)
 
         if len(inputs.size())==1:
-            inputs=inputs.view((1,inputs.size(0)))
+            inputs = inputs.type(torch.long).to(device)
+            inputs = self.embedding(inputs)
+        else:
+            inputs=inputs.squeeze()
+
+
+
+        # inputs=inputs.view((1,-1))
 
         #shoult context view this way?
         context=context.squeeze(1)
@@ -218,7 +223,11 @@ class LasModel(nn.Module):
                     char=y_input[:,i]
                 else:
                     predict = self.log_softmax(last_logit)
-                    char = torch.max(predict, dim=1)[1]
+                    noise=np.random.gumbel(size=predict.size())
+                    predict=predict+torch.from_numpy(noise).type(torch.float)
+
+
+                    char=torch.bmm(F.softmax(predict / 0.001).unsqueeze(0),self.decoder.embedding.weight.unsqueeze(0))
             else:
                 if i == 0:
                     char = torch.LongTensor([32] * batch_size)

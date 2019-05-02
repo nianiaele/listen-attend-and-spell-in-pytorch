@@ -21,6 +21,7 @@ def train_epoch(epoch_num):
     batch_num=0
     model.is_train=True
     model.to(device)
+    torch.autograd.set_detect_anomaly(True)
     for batch_id,(x,y,xbounds,ybounds,xLens,yLens,inputy,targety) in enumerate(train_loader):
 
         batch_num = batch_id + 1
