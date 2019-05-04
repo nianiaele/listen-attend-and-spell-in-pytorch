@@ -47,28 +47,15 @@ def train_epoch(epoch_num):
 
         output,stack_attention=model(packed_x,xLens,inputy,targety,yLens)
 
-        # output_lable=torch.argmax(output.squeeze(),dim=1)
-
-        # print(to_string(output))
 
         loss=criterion(output,targety,yLens)
 
         loss.backward()
 
-        # plot_grad_flow(model.decoder.named_parameters())
-        # plot_grad_flow(model.encoder.named_parameters())
-        # plot_grad_flow(model.named_parameters())
-
-        # gradient clipping
-        # for para in model.parameters():
-        #     # print(para.grad)
-        #     if para.grad!=None:
-        #         para.grad.data.clamp_(-1, 1)
         clip_grad_value_(model.parameters(), clip_value)
 
         # plot_grad_flow(model.named_parameters())
 
-        # print(loss)
 
         optimizer.step()
 
@@ -76,9 +63,6 @@ def train_epoch(epoch_num):
 
         total_perplexity+=torch.exp(loss)
 
-        # if epoch_num==0:
-        #     print(loss)
-        # show_attention_weights(stack_attention)
 
         if batch_id%configuration.print_cut==0:
             print("batch: ", batch_num)
@@ -120,7 +104,7 @@ def train_epoch(epoch_num):
     torch.save({
         'model_state_dict':model.state_dict(),
         'optimizer_label':optimizer.state_dict()
-    }, "./myModel")
+    }, "./myModel2"+str(epoch_num))
     print("model saved")
 
     return total_loss/batch_num, total_perplexity/batch_num, total_dev_loss/dev_batch_number, total_dev_perplexity/dev_batch_number
@@ -140,7 +124,7 @@ criterion=CrossEntropyLossWithMask().to(device)
 
 if configuration.is_pretrain==True:
     print("loading model")
-    check_point = torch.load("./myModel", map_location='cpu')
+    check_point = torch.load("./myModel26", map_location='cpu')
     model.load_state_dict(check_point['model_state_dict'])
     optimizer.load_state_dict(check_point['optimizer_label'])
     for state in optimizer.state.values():

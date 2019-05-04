@@ -224,7 +224,7 @@ class LasModel(nn.Module):
                 else:
                     predict = self.log_softmax(last_logit)
                     noise=np.random.gumbel(size=predict.size())
-                    predict=predict+torch.from_numpy(noise).type(torch.float)
+                    predict=predict+torch.from_numpy(noise).type(torch.float).to(device)
 
 
                     char=torch.bmm(F.softmax(predict / 0.001).unsqueeze(0),self.decoder.embedding.weight.unsqueeze(0))

@@ -1,8 +1,8 @@
 # import util
 import torch
 
-dataBasePath='/home/lixin/newCourses/11785/hw4p2/data/'
-# dataBasePath='/home/lixin/hw4/data/data/'
+# dataBasePath='/home/lixin/newCourses/11785/hw4p2/data/'
+dataBasePath='/home/lixin/hw4/data/data/'
 
 device="cuda" if torch.cuda.is_available() else "cpu"
 
@@ -12,7 +12,7 @@ kqv_size=128
 listener_hidden_size=256
 speller_hidden_size=512
 frame_dim=40
-batch_size=2
+batch_size=128
 output_dim=34
 learning_rate=0.001
 epoch_num=40
