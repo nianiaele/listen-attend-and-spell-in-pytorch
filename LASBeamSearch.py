@@ -20,6 +20,15 @@ class beam_node():
         self.context=None
         self.score=0
 
+    def set_h_c(self,h1,c1,h2,c2):
+        self.h1=h1
+        self.c1=c1
+        self.h2=h2
+        self.c2=c2
+
+    def get_h_c(self):
+        return self.h1,self.c1,self.h2,self.c2
+
     def copy(self,old):
         self.current_value=old.current_value
         self.context=old.context
@@ -46,10 +55,9 @@ model.load_state_dict(checkPoint['model_state_dict'])
 
 dev_x_path=dataBasePath+"test.npy"
 dev_dataset=WSJDataset(dev_x_path)
-test_loader=DataLoader(dev_dataset,shuffle=False,batch_size=1,collate_fn=collateTest,num_workers=2)
+test_loader=DataLoader(dev_dataset,shuffle=False,batch_size=1,collate_fn=collateTest,num_workers=8)
 
 def beam_search(model,data_loader,beam_width):
-
 
     encoder=model.encoder
     decoder=model.decoder
@@ -62,12 +70,10 @@ def beam_search(model,data_loader,beam_width):
 
     model.is_train=False
 
-    beam_list=[0 for i in range(beam_width)]
 
 
-
-    for i in range(beam_width):
-        beam_list[i]=beam_node()
+    # for i in range(beam_width):
+    #     beam_list[i]=beam_node()
 
     for x, xbounds, xLens in data_loader:
 
@@ -95,10 +101,14 @@ def beam_search(model,data_loader,beam_width):
         i=0
 
         beam_queue = queue.PriorityQueue(3 * beam_width)
+
         result_list=one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context)
 
         # for nodee in result_list:
         #     print(indexToChar(nodee.history_list)+ str(nodee.current_value))
+
+
+
 
         best_node=find_best_result(result_list)
 
@@ -106,8 +116,13 @@ def beam_search(model,data_loader,beam_width):
 
         print(indexToChar(history_list))
 
+        # print_result(result_list)
+        # exit(0)
+
         result.append(history_list)
     return result
+
+
 
 def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context):
     ii=0
@@ -117,7 +132,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
         if ii == 0:
             char = torch.LongTensor([32] * 1)
 
-            query,decoder_out = decoder(char, context, ii)
+            query,c = decoder(char, context, ii)
 
             energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
 
@@ -145,6 +160,8 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
                 node = beam_node()
 
+                node.set_h_c(decoder.h1,decoder.c1,decoder.h2,decoder.c2)
+
                 node.history_list.append(indice[j].item())
                 # node.currentValue = beam_list[i].current_value * probability[pos]
                 node.context = context
@@ -162,6 +179,11 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
             context = node.context
 
             input = torch.tensor(char)
+
+
+            h1,c1,h2,c2=node.get_h_c()
+            decoder.set_h_c(h1,c1,h2,c2)
+
             query, decoder_out = decoder(input.view(input.size(), 1), context, ii)
 
             energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
@@ -186,10 +208,11 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
             sorted, indice = torch.sort(probability, descending=True)
 
-            for j in range(len(char_List)):
+            for j in range(10):
                 pos = indice[j].item()
 
                 new_node = beam_node()
+                new_node.set_h_c(decoder.h1,decoder.c1,decoder.h2,decoder.c2)
                 new_node.copy(node)
 
                 new_node.history_list.append(indice[j].item())
@@ -229,6 +252,13 @@ def indexToChar(index_list):
     for i in index_list:
         string+=char_List[i]
     return string
+
+def print_result(result_list):
+    for node_i in range(len(result_list)):
+        print(result_list[node_i].score)
+        print(indexToChar(result_list[node_i].history_list))
+        print("-----------------------------------------------------")
+
 
 def find_best_result(result_list):
     best_node=result_list[0]
