@@ -77,6 +77,7 @@ def beam_search(model,data_loader,beam_width):
 
     for x, xbounds, xLens in data_loader:
 
+        length=x[0].size(0)
         x=pack_sequence(x)
         keys, values = encoder(x, xLens)
 
@@ -100,9 +101,9 @@ def beam_search(model,data_loader,beam_width):
         got_eos=False
         i=0
 
-        beam_queue = queue.PriorityQueue(3 * beam_width)
+        beam_queue = queue.PriorityQueue(beam_width * beam_width)
 
-        result_list=one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context)
+        result_list=one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context,length)
 
         # for nodee in result_list:
         #     print(indexToChar(nodee.history_list)+ str(nodee.current_value))
@@ -124,7 +125,7 @@ def beam_search(model,data_loader,beam_width):
 
 
 
-def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context):
+def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,context,length):
     ii=0
     softmax=nn.Softmax(dim=2)
     result_list=[]
@@ -156,7 +157,7 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
             sorted, indice = torch.sort(probability, descending=True)
 
-            for j in range(len(char_List)):
+            for j in range(beam_width):
 
                 node = beam_node()
 
@@ -172,76 +173,68 @@ def one_seq_beam(decoder,keys,mask,values,linear1,linear2,relu,beam_queue,contex
 
                 beam_queue.put(node)
         else:
+            n_beam_queue=queue.PriorityQueue(beam_width * beam_width)
+            next_beam_queue = queue.PriorityQueue(beam_width * beam_width)
+            while beam_queue.qsize()!=0:
+                node = beam_queue.get()
+                char = node.history_list[-1]
 
-            node = beam_queue.get()
-            char = node.history_list[-1]
+                context = node.context
 
-            context = node.context
+                input = torch.tensor(char)
 
-            input = torch.tensor(char)
+                h1, c1, h2, c2 = node.get_h_c()
+                decoder.set_h_c(h1, c1, h2, c2)
 
+                query, decoder_out = decoder(input.view(input.size(), 1), context, ii)
 
-            h1,c1,h2,c2=node.get_h_c()
-            decoder.set_h_c(h1,c1,h2,c2)
+                energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
 
-            query, decoder_out = decoder(input.view(input.size(), 1), context, ii)
+                attention = F.softmax(energy, dim=2)
 
-            energy = torch.bmm(query.unsqueeze(1), keys.transpose(1, 2))
+                attention = attention * mask
 
-            attention = F.softmax(energy, dim=2)
+                attention = attention / torch.sum(attention, 2).unsqueeze(2)
 
-            attention = attention * mask
+                context = torch.bmm(attention, values)
 
-            attention = attention / torch.sum(attention, 2).unsqueeze(2)
+                context = context.squeeze(1)
 
-            context = torch.bmm(attention, values)
+                mlp_input = torch.cat((context, query), 1)
 
-            context = context.squeeze(1)
+                logit = linear1(mlp_input)
+                logit = relu(logit)
+                logit = linear2(logit)
 
-            mlp_input = torch.cat((context, query), 1)
+                probability = F.softmax(logit, dim=1).view(-1)
 
-            logit = linear1(mlp_input)
-            logit = relu(logit)
-            logit = linear2(logit)
+                sorted, indice = torch.sort(probability, descending=True)
 
-            probability = F.softmax(logit, dim=1).view(-1)
+                for j in range(beam_width):
+                    pos = indice[j].item()
 
-            sorted, indice = torch.sort(probability, descending=True)
+                    new_node = beam_node()
+                    new_node.set_h_c(decoder.h1, decoder.c1, decoder.h2, decoder.c2)
+                    new_node.copy(node)
 
-            for j in range(10):
-                pos = indice[j].item()
+                    new_node.history_list.append(indice[j].item())
+                    new_node.current_value = node.current_value * probability[pos].item()
+                    new_node.context = context
+                    new_node.get_score()
 
-                new_node = beam_node()
-                new_node.set_h_c(decoder.h1,decoder.c1,decoder.h2,decoder.c2)
-                new_node.copy(node)
+                    if indice[j].item() == 33:
+                        if len(new_node.history_list) > length//9:
+                            result_list.append(new_node)
+                        continue
 
-                new_node.history_list.append(indice[j].item())
-                new_node.current_value = node.current_value * probability[pos].item()
-                new_node.context = context
-                new_node.get_score()
+                    if len(result_list) > 200 * beam_width:
+                        return result_list
 
-                if indice[j].item() == 33:
-                    if len(new_node.history_list)>10:
-                        result_list.append(new_node)
-                    continue
+                    n_beam_queue.put(new_node, block=False)
 
-                if len(result_list)>5*beam_width:
-                    return result_list
-
-                # print(len(new_node.history_list))
-                # if len(new_node.history_list)>max_generate_length:
-                #     return result_list
-
-                try:
-                    beam_queue.put(new_node, block=False)
-                except:
-                    new_beam_queue = queue.PriorityQueue(3 * beam_width)
-                    for k in range(beam_width * 3 - 1):
-                        new_beam_queue.put(beam_queue.get())
-                    beam_queue = new_beam_queue
-
-                    beam_queue.put(new_node, block=False)
-
+            for i in range(beam_width):
+                next_beam_queue.put(n_beam_queue.get())
+            beam_queue=next_beam_queue
         ii+=1
 
     return result_list
