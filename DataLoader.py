@@ -1,8 +1,6 @@
 import torch
 from torch.utils.data import Dataset
 import numpy as np
-import configuration
-from torch.utils.data.dataloader import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -11,10 +9,10 @@ class WSJDataset(Dataset):
     def __init__(self, trainXpath, trainYpath=None):
         self.yPath = trainYpath
 
-        self.trainX = np.load(trainXpath, encoding='bytes',allow_pickle=True)
+        self.trainX = np.load(trainXpath, encoding='bytes', allow_pickle=True)
 
         if not trainYpath == None:
-            self.trainY = np.load(trainYpath, encoding='bytes',allow_pickle=True)
+            self.trainY = np.load(trainYpath, encoding='bytes', allow_pickle=True)
         else:
             self.trainY = np.random.rand((self.trainX.shape[0]))
 
@@ -51,10 +49,8 @@ def collateFrames(frameList):
     inputY = [yFrame[i][0:yFrame[i].shape[0] - 1] for i in range(len(frameOrder))]
     targetY = [yFrame[i][1:yFrame[i].shape[0]] for i in range(len(frameOrder))]
 
-    padded_inputY = pad_sequence(inputY).transpose(0,1)
-    padded_targetY = pad_sequence(targetY).transpose(0,1)
-
-
+    padded_inputY = pad_sequence(inputY).transpose(0, 1)
+    padded_targetY = pad_sequence(targetY).transpose(0, 1)
 
     yTensor = torch.cat(yFrame)
 
@@ -71,8 +67,6 @@ def collateFrames(frameList):
 
     xLensTensor = torch.tensor(xLens)
     yLensTensor = torch.tensor(yLens)
-
-
 
     return xFrame, yTensor, xBounds, yBounds, xLensTensor, yLensTensor, padded_inputY, padded_targetY
 
@@ -93,7 +87,6 @@ def collateTest(frameList):
     xLensTensor = torch.tensor(xLens)
 
     return xFrame, xBounds, xLensTensor
-
 
 # trainXPath = configuration.dataBasePath + 'train.npy'
 # trainYPath = configuration.dataBasePath + 'newTrainY.npy'

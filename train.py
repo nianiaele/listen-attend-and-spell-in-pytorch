@@ -54,7 +54,7 @@ def train_epoch(epoch_num):
 
         clip_grad_value_(model.parameters(), clip_value)
 
-        # plot_grad_flow(model.named_parameters())
+        plot_grad_flow(model.named_parameters())
 
 
         optimizer.step()
@@ -104,7 +104,7 @@ def train_epoch(epoch_num):
     torch.save({
         'model_state_dict':model.state_dict(),
         'optimizer_label':optimizer.state_dict()
-    }, "./myModel3"+str(epoch_num))
+    }, "./myModel7"+str(epoch_num))
     print("model saved")
 
     return total_loss/batch_num, total_perplexity/batch_num, total_dev_loss/dev_batch_number, total_dev_perplexity/dev_batch_number
@@ -124,7 +124,7 @@ criterion=CrossEntropyLossWithMask().to(device)
 
 if configuration.is_pretrain==True:
     print("loading model")
-    check_point = torch.load("./myModel", map_location='cpu')
+    check_point = torch.load("./myModel64", map_location='cpu')
     model.load_state_dict(check_point['model_state_dict'])
     optimizer.load_state_dict(check_point['optimizer_label'])
     for state in optimizer.state.values():
